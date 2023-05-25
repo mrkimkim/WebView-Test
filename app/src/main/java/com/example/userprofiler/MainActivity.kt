@@ -14,7 +14,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.room.Room
+import com.mrkimkim.userprofiler.database.RecordDatabase
+import com.mrkimkim.userprofiler.database.Record
 import com.mrkimkim.userprofiler.ui.theme.UserProfilerTheme
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
     companion object {
@@ -27,8 +35,13 @@ class MainActivity : ComponentActivity() {
             UserProfilerTheme {
                 WebViewComposable(url = URL)
             }
-            // WebView로 웹사이트를 불러오지 못할 때의 Fallback 로직
-            // OpenWebPageOnLaunch(URL)
+        }
+
+        GlobalScope.launch {
+            val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+            val dateString = format.format(Date())
+            val db = RecordDatabase.getInstance(applicationContext)
+            db.recordDao().insertAll(Record(0, dateString, System.currentTimeMillis()))
         }
     }
 }
@@ -74,3 +87,129 @@ fun GreetingPreview() {
         WebViewComposable(url = MainActivity.URL)
     }
 }
+
+/*
+override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
+        setContent {
+            val count by viewModel.count.collectAsState()
+            UserProfilerTheme {
+                // A surface container using the 'background' color from the theme
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background,
+                ) {
+                    StepBoard("TOTAL STEPS COUNT", count)
+                }
+            }
+        }
+    }
+
+// 사용자의 동의를 얻는다
+if (ActivityCompat.checkSelfPermission(
+        this, Manifest.permission.READ_CALL_LOG
+    ) != PackageManager.PERMISSION_GRANTED
+) {
+    ActivityCompat.requestPermissions(
+        this, arrayOf(Manifest.permission.READ_CALL_LOG), 101
+    );
+}
+
+// CallLog.Calls.CONTENT_URI는 통화 기록에 대한 URI입니다
+val managedCursor = managedQuery(CallLog.Calls.CONTENT_URI, null, null, null, null)
+
+// 각 컬럼의 인덱스를 얻습니다
+val number = managedCursor.getColumnIndex(CallLog.Calls.NUMBER)
+val type = managedCursor.getColumnIndex(CallLog.Calls.TYPE)
+val date = managedCursor.getColumnIndex(CallLog.Calls.DATE)
+val duration = managedCursor.getColumnIndex(CallLog.Calls.DURATION)
+
+// 결과를 출력합니다
+while (managedCursor.moveToNext()) {
+    val phNumber = managedCursor.getString(number)
+    val callType = managedCursor.getString(type)
+    val callDate = managedCursor.getString(date)
+    val callDayTime = Date(Long.valueOf(callDate))
+    val callDuration = managedCursor.getString(duration)
+    var dir: String? = null
+    val dircode = callType.toInt()
+    when (dircode) {
+        CallLog.Calls.OUTGOING_TYPE -> dir = "OUTGOING"
+        CallLog.Calls.INCOMING_TYPE -> dir = "INCOMING"
+        CallLog.Calls.MISSED_TYPE -> dir = "MISSED"
+        else -> dir = "ELSE"
+    }
+    Log.i(
+        "CallLog", """
+Phone Number: $phNumber
+Call Type: $dir
+Call Date: $callDayTime
+Call duration in sec: $callDuration
+""".trimIndent()
+    )
+}
+managedCursor.close()
+
+if (ContextCompat.checkSelfPermission(
+        this,
+        Manifest.permission.ACTIVITY_RECOGNITION
+    ) != PackageManager.PERMISSION_GRANTED
+) {
+    // Permission is not granted
+    ActivityCompat.requestPermissions(
+        this, arrayOf(Manifest.permission.ACTIVITY_RECOGNITION), 100
+    )
+}
+
+val account = GoogleSignIn.getAccountForExtension(this, fitnessOptions)
+Log.d("hyeongyu", "getAccountForExtension")
+if (!GoogleSignIn.hasPermissions(account, fitnessOptions)) {
+    Log.d("hyeongyu", "no hasPermissions")
+    GoogleSignIn.requestPermissions(
+        this, // your activity
+        GOOGLE_FIT_PERMISSIONS_REQUEST_CODE, // e.g. 1
+        account, fitnessOptions
+    )
+} else {
+    accessGoogleFit()
+}
+}
+
+private fun accessGoogleFit() {
+Fitness.getRecordingClient(this, GoogleSignIn.getAccountForExtension(this, fitnessOptions))
+    .subscribe(DataType.TYPE_STEP_COUNT_CUMULATIVE).addOnSuccessListener {
+        Log.i(TAG, "Subscription was successful!")
+    }.addOnFailureListener { e ->
+        Log.w(TAG, "There was a problem subscribing ", e)
+    }
+
+Fitness.getHistoryClient(this, GoogleSignIn.getAccountForExtension(this, fitnessOptions))
+    .readDailyTotal(DataType.TYPE_STEP_COUNT_DELTA).addOnSuccessListener({ result ->
+        // Use response data here
+        val totalSteps =
+            result.dataPoints.firstOrNull()?.getValue(Field.FIELD_STEPS)?.asInt() ?: 0
+        viewModel.setCount(totalSteps)
+        Log.d(TAG, "Total steps: $totalSteps")
+    }).addOnFailureListener({ e -> Log.d(TAG, "OnFailure()", e) })
+}
+
+override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+super.onActivityResult(requestCode, resultCode, data)
+Log.d(TAG, "onActivityResult")
+when (resultCode) {
+    Activity.RESULT_OK -> when (requestCode) {
+        GOOGLE_FIT_PERMISSIONS_REQUEST_CODE -> accessGoogleFit()
+        else -> {
+            // Result wasn't from Google Fit
+        }
+    }
+
+    else -> {
+        Log.d(TAG, "Permission not granted" + resultCode.toString());
+        // Permission not granted
+    }
+}
+}
+*
+*/
